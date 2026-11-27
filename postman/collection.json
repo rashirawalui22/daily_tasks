@@ -1,0 +1,233 @@
+{
+  "info": {
+    "_postman_id": "c1fd7ea1-21ca-4264-a91a-9c2dfe24e82a",
+    "name": "Course Project Portfolio API",
+    "description": "Four API endpoints for projects and visitor feedback. Run the requests in order; IDs are saved dynamically from real API responses.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "projectId",
+      "value": ""
+    },
+    {
+      "key": "missingProjectId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Create Project",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Project created with HTTP 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.success).to.eql(true);",
+              "  pm.expect(body.data._id).to.be.a('string');",
+              "  pm.collectionVariables.set('projectId', body.data._id);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Course Project Portfolio\",\n  \"description\": \"A web app for students to showcase course projects.\",\n  \"technologies\": [\"Node.js\", \"Express\", \"MongoDB\", \"React\"],\n  \"githubUrl\": \"https://github.com/example/course-portfolio\",\n  \"liveUrl\": \"https://portfolio.example.com\",\n  \"owner\": \"Alex Student\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/projects",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "projects"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Get All Projects",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Published projects returned with HTTP 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().data).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/projects",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "projects"
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Get Project by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Project details returned with HTTP 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('projectId'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/projects/{{projectId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "projects",
+            "{{projectId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Submit Feedback",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Feedback submitted with HTTP 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "  pm.expect(pm.response.json().data.project).to.eql(pm.collectionVariables.get('projectId'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Taylor Visitor\",\n  \"email\": \"taylor@example.com\",\n  \"rating\": 5,\n  \"comment\": \"Clear presentation and a useful project.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/projects/{{projectId}}/feedback",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "projects",
+            "{{projectId}}",
+            "feedback"
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Feedback for Missing Project (404)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const hex = '0123456789abcdef';",
+              "let id = '';",
+              "for (let index = 0; index < 24; index += 1) {",
+              "  id += hex[Math.floor(Math.random() * hex.length)];",
+              "}",
+              "pm.collectionVariables.set('missingProjectId', id);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Missing project returns the documented 404', function () {",
+              "  pm.response.to.have.status(404);",
+              "  pm.expect(pm.response.json()).to.eql({",
+              "    success: false,",
+              "    message: 'Project not found',",
+              "    error: {",
+              "      code: 'PROJECT_NOT_FOUND',",
+              "      details: 'No project exists with the supplied ID'",
+              "    }",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Taylor Visitor\",\n  \"email\": \"taylor@example.com\",\n  \"rating\": 5,\n  \"comment\": \"This feedback must not be saved.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/projects/{{missingProjectId}}/feedback",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "projects",
+            "{{missingProjectId}}",
+            "feedback"
+          ]
+        }
+      }
+    }
+  ]
+}
