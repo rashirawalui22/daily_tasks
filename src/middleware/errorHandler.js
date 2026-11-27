@@ -14,6 +14,28 @@ function errorHandler(error, req, res, next) {
     });
   }
 
+  if (error.code === 11000) {
+    return res.status(409).json({
+      success: false,
+      message: 'A record with this unique value already exists',
+      error: {
+        code: 'DUPLICATE_VALUE',
+        details: 'The record conflicts with an existing unique value'
+      }
+    });
+  }
+
+  if (error.status && error.code) {
+    return res.status(error.status).json({
+      success: false,
+      message: error.message,
+      error: {
+        code: error.code,
+        details: error.message
+      }
+    });
+  }
+
   if (error.name === 'ValidationError' || error.name === 'CastError') {
     const details = error.name === 'ValidationError'
       ? Object.values(error.errors).map((item) => item.message)

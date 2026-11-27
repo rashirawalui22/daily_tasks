@@ -19,11 +19,16 @@ src/
   middleware/notFound.js
   models/Feedback.js
   models/Project.js
+  models/Appointment.js
+  models/Patient.js
   routes/projectRoutes.js
+  services/appointmentService.js
+  services/patientService.js
   utils/validation.js
   app.js
   server.js
 tests/
+  clinicModels.test.js
   projects.test.js
 postman/
   collection.json
@@ -278,10 +283,98 @@ The `screenshots/` directory is prepared for genuine evidence; no screenshots ar
 
 ## GitHub submission
 
-From the project root, review the staged changes and then run:
+Stage only the files for the task, review the staged diff, and commit. Do not push unless requested:
 
 ```bash
-git add .
-git commit -m "Day 2: Design and implement REST APIs"
-git push origin main
+git add README.md .env.example src/middleware/errorHandler.js src/models/Appointment.js src/models/Patient.js src/services/appointmentService.js src/services/patientService.js tests/clinicModels.test.js
+git diff --cached --check
+git commit -m "feat: add patient and appointment MongoDB schemas with indexes"
 ```
+
+## Day 3: Clinic appointment schemas and indexes
+
+The clinic data layer adds Patient and Appointment Mongoose models and reusable services. It does not add clinic HTTP routes or store medical records; `reason` is limited to a short appointment booking reason. Patient email is normalized to lowercase and is not included in appointment query results.
+
+### Patient schema
+
+`src/models/Patient.js` stores a trimmed `fullName`, lowercase/trimmed unique `email`, required `phoneNumber`, optional `dateOfBirth`, and Mongoose-managed `createdAt`/`updatedAt` timestamps. Names and phone numbers have bounded lengths; email and phone values are validated, and dates of birth cannot be in the future.
+
+### Appointment schema and relationship
+
+`src/models/Appointment.js` stores `patientId` as a required ObjectId with `ref: 'Patient'`, plus required trimmed `doctorName`, future `appointmentDate`, short `reason`, enumerated `status`, and timestamps. Status defaults to `pending` and only accepts `pending`, `confirmed`, `cancelled`, or `completed`.
+
+The relationship is one-to-many: each appointment stores one patient reference, and many appointments can refer to the same patient. Referencing is preferable to embedding because patients and appointments have independent lifecycles, and a patient may have an unbounded number of appointments; references avoid duplicating patient data in each appointment. The appointment model validates that its referenced patient exists, while `src/services/appointmentService.js` provides explicit ID/existence checks for service callers.
+
+To retrieve one patient's appointments, the service filters by `patientId`, sorts by date, and populates only the patient's name:
+
+```js
+const { getPatientAppointments } = require('./src/services/appointmentService');
+
+const appointments = await getPatientAppointments(patientId);
+// Each appointment includes patientId: { _id, fullName }.
+```
+
+### Clinic indexes
+
+Exactly two application-defined indexes are declared in the schemas (in addition to MongoDB's built-in `_id` index):
+
+1. **Unique `{ email: 1 }` on Patient**: accelerates equality lookups by email during login or booking and enforces uniqueness under concurrent writes. The cost is extra disk/memory and index maintenance for patient inserts and email updates.
+2. **`{ patientId: 1, appointmentDate: 1 }` on Appointment**: supports filtering appointments for one patient and sorting those appointments by date. This compound order matches the service query. It consumes storage and adds index maintenance to appointment inserts and updates.
+
+### Clinic validation and safe errors
+
+- Required fields, trimming, string lengths, email format, and phone format are enforced by the Patient schema.
+- Duplicate patient email writes are translated by `createPatient` into a safe `409` error without echoing the submitted email. The shared Express error middleware also returns a generic `409` for duplicate-key errors.
+- Appointment references must contain a valid ObjectId and point to an existing Patient. Invalid IDs and missing patients have safe `400`/`404` service errors.
+- Appointment date must be in the future; status must match the allowed enum. Validation failures do not save documents.
+- No extra medical history, diagnoses, or other sensitive clinical data is collected.
+
+### Clinic usage example
+
+The services support document creation without exposing a new HTTP endpoint:
+
+```js
+const { createPatient } = require('./src/services/patientService');
+const { createAppointment } = require('./src/services/appointmentService');
+
+const patient = await createPatient({
+  fullName: 'Morgan Patient',
+  email: 'morgan@example.com',
+  phoneNumber: '+1 (415) 555-0132'
+});
+
+const appointment = await createAppointment({
+  patientId: patient._id,
+  doctorName: 'Dr. Rivera',
+  appointmentDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  reason: 'Annual checkup'
+});
+```
+
+### Clinic setup and tests
+
+Use the existing Node.js/MongoDB setup above. For a fresh checkout:
+
+```bash
+npm install
+```
+
+Copy `.env.example` to `.env` and set `MONGODB_URI` to a local or hosted MongoDB database you control. Do not commit `.env`. The existing server starts with `npm start`; clinic models/services are data-layer additions and do not add clinic HTTP routes.
+
+Run the clinic integration tests, or the full existing test suite:
+
+```bash
+npm test -- tests/clinicModels.test.js
+npm test
+```
+
+Clinic tests use `mongodb-memory-server` and cover document creation, missing fields, invalid/duplicate email, invalid appointment status/date/reference, populated and date-sorted patient appointment lookup, and the declared indexes. The appointment query test explicitly hints the compound index. In environments where sandbox policy blocks local loopback database connections, these DB-backed tests cannot run; rerun the commands above in an environment that permits the in-memory MongoDB process to bind/connect locally.
+
+In this sandbox, the earlier database-backed test run failed with `connect EACCES 127.0.0.1` while connecting to the in-memory MongoDB server. The clinic integration tests have therefore not been verified here. Run `npm test -- tests/clinicModels.test.js` and `npm test` in an environment that permits local loopback connections.
+
+### Clinic assumptions
+
+- Appointment dates represent future bookings; past appointments cannot be newly created through this model.
+- Phone validation accepts common international punctuation and requires at least seven digits.
+- Email checks validate a practical address format and uniqueness, not mailbox ownership.
+- Clinic schemas and services are independent of the existing portfolio API; no clinic routes were requested.
