@@ -5,7 +5,8 @@ function notFound(req, res) {
     error: {
       code: 'ROUTE_NOT_FOUND',
       details: `No route exists for ${req.method} ${req.originalUrl}`
-    }
+    },
+    requestId: req.requestId || null
   });
 }
 

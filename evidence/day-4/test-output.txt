@@ -1,0 +1,90 @@
+
+> day-2-rest-api@1.0.0 test
+> jest --runInBand tests/quizAttempts.test.js --silent=false
+
+FAIL tests/quizAttempts.test.js
+  POST /api/quiz-attempts
+    × submits a valid attempt with a response request ID (21 ms)
+    × rejects a missing studentId with HTTP 400 and a traceable error (7 ms)
+    × rejects an empty answers array (15 ms)
+    × rejects invalid timeTaken value -1 (4 ms)
+    × rejects invalid timeTaken value 0 (2 ms)
+    × rejects invalid timeTaken value "300" (5 ms)
+    × rejects invalid timeTaken value 1.5 (3 ms)
+    × rejects missing answer fields and unexpected fields (3 ms)
+    × returns a new request ID for each request (2 ms)
+    × returns a safe centralized 400 for malformed JSON (2 ms)
+  centralized unexpected error handling
+    × returns HTTP 500 with a request ID without exposing stack details (5 ms)
+System.Management.Automation.RemoteException
+  ● POST /api/quiz-attempts › submits a valid attempt with a response request ID
+System.Management.Automation.RemoteException
+    connect EACCES 127.0.0.1:50335
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+  ● POST /api/quiz-attempts › rejects a missing studentId with HTTP 400 and a traceable error
+System.Management.Automation.RemoteException
+    connect EACCES 127.0.0.1:50337
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+  ● POST /api/quiz-attempts › rejects an empty answers array
+System.Management.Automation.RemoteException
+    connect EACCES 127.0.0.1:50339
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+  ● POST /api/quiz-attempts › rejects invalid timeTaken value -1
+System.Management.Automation.RemoteException
+    connect EACCES 127.0.0.1:50341
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+  ● POST /api/quiz-attempts › rejects invalid timeTaken value 0
+System.Management.Automation.RemoteException
+    connect EACCES 127.0.0.1:50343
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+  ● POST /api/quiz-attempts › rejects invalid timeTaken value "300"
+System.Management.Automation.RemoteException
+    connect EACCES 127.0.0.1:50345
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+  ● POST /api/quiz-attempts › rejects invalid timeTaken value 1.5
+System.Management.Automation.RemoteException
+    connect EACCES 127.0.0.1:50347
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+  ● POST /api/quiz-attempts › rejects missing answer fields and unexpected fields
+System.Management.Automation.RemoteException
+    connect EACCES 127.0.0.1:50349
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+  ● POST /api/quiz-attempts › returns a new request ID for each request
+System.Management.Automation.RemoteException
+    connect EACCES 127.0.0.1:50351
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+  ● POST /api/quiz-attempts › returns a safe centralized 400 for malformed JSON
+System.Management.Automation.RemoteException
+    connect EACCES 127.0.0.1:50353
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+  ● centralized unexpected error handling › returns HTTP 500 with a request ID without exposing stack details
+System.Management.Automation.RemoteException
+    connect EACCES 127.0.0.1:50355
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+Test Suites: 1 failed, 1 total
+Tests:       11 failed, 11 total
+Snapshots:   0 total
+Time:        2.688 s, estimated 4 s
+Ran all test suites matching /tests\\quizAttempts.test.js/i.
