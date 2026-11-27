@@ -3,14 +3,26 @@ function errorHandler(error, req, res, next) {
     return next(error);
   }
 
+  const requestId = req.requestId || null;
+
+  if (error.name === 'QuizAttemptValidationError') {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation failed',
+      errors: error.errors,
+      requestId
+    });
+  }
+
   if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
     return res.status(400).json({
       success: false,
       message: 'Invalid JSON body',
-      error: {
-        code: 'INVALID_JSON',
-        details: 'Request body must contain valid JSON'
-      }
+      errors: [{
+        field: 'body',
+        message: 'Request body must contain valid JSON'
+      }],
+      requestId
     });
   }
 
@@ -21,7 +33,8 @@ function errorHandler(error, req, res, next) {
       error: {
         code: 'DUPLICATE_VALUE',
         details: 'The record conflicts with an existing unique value'
-      }
+      },
+      requestId
     });
   }
 
@@ -32,7 +45,8 @@ function errorHandler(error, req, res, next) {
       error: {
         code: error.code,
         details: error.message
-      }
+      },
+      requestId
     });
   }
 
@@ -47,18 +61,20 @@ function errorHandler(error, req, res, next) {
       error: {
         code: 'VALIDATION_ERROR',
         details
-      }
+      },
+      requestId
     });
   }
 
-  console.error(error);
+  console.error(`[${requestId}] Unexpected server error: ${error.message}`);
   return res.status(500).json({
     success: false,
     message: 'Internal server error',
     error: {
       code: 'INTERNAL_SERVER_ERROR',
       details: 'An unexpected error occurred'
-    }
+    },
+    requestId
   });
 }
 

@@ -15,21 +15,27 @@ A beginner-friendly Express and MongoDB API for publishing student course projec
 src/
   config/db.js
   controllers/projectController.js
+  controllers/quizAttemptController.js
   middleware/errorHandler.js
   middleware/notFound.js
+  middleware/requestId.js
+  middleware/validateQuizAttempt.js
   models/Feedback.js
   models/Project.js
   models/Appointment.js
   models/Patient.js
   routes/projectRoutes.js
+  routes/quizAttemptRoutes.js
   services/appointmentService.js
   services/patientService.js
+  services/quizAttemptService.js
   utils/validation.js
   app.js
   server.js
 tests/
   clinicModels.test.js
   projects.test.js
+  quizAttempts.test.js
 postman/
   collection.json
 screenshots/
@@ -378,3 +384,82 @@ In this sandbox, the earlier database-backed test run failed with `connect EACCE
 - Phone validation accepts common international punctuation and requires at least seven digits.
 - Email checks validate a practical address format and uniqueness, not mailbox ownership.
 - Clinic schemas and services are independent of the existing portfolio API; no clinic routes were requested.
+
+## Day 4: Express middleware and quiz attempt validation
+
+The learning-platform example adds `POST /api/quiz-attempts` and demonstrates strict input validation, per-request tracing, and centralized errors. It uses an in-memory prototype and does not add a database model or dependency.
+
+### Endpoint and request
+
+`POST /api/quiz-attempts`
+
+```json
+{
+  "studentId": "STU101",
+  "courseId": "COURSE101",
+  "quizId": "QUIZ101",
+  "answers": [
+    { "questionId": "Q1", "selectedOption": "B" },
+    { "questionId": "Q2", "selectedOption": "A" }
+  ],
+  "timeTaken": 300
+}
+```
+
+Successful response (`201 Created`):
+
+```json
+{
+  "success": true,
+  "message": "Quiz attempt submitted successfully",
+  "data": {
+    "attemptId": "generated-uuid",
+    "studentId": "STU101",
+    "courseId": "COURSE101",
+    "quizId": "QUIZ101",
+    "totalQuestions": 2,
+    "timeTaken": 300
+  },
+  "requestId": "generated-request-uuid"
+}
+```
+
+Invalid input returns `400 Bad Request`, with field-level errors and the same request ID in both the response body and the `X-Request-ID` header:
+
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "timeTaken",
+      "message": "timeTaken must be a positive integer"
+    }
+  ],
+  "requestId": "generated-request-uuid"
+}
+```
+
+### Validation and middleware
+
+`src/middleware/validateQuizAttempt.js` is separate from the controller and validates a JSON object, non-empty string identifiers, a non-empty answers array with non-empty `questionId`/`selectedOption` strings, and a positive integer `timeTaken`. Unknown fields at the request and answer levels are rejected.
+
+Separating validation middleware from route handlers keeps request-shape checks reusable and makes the controller focus on submission behavior. This avoids mixing parsing/validation details with application logic, at the cost of another middleware module and an explicit route chain.
+
+`src/middleware/requestId.js` generates a fresh UUID for each request, attaches it to `req.requestId`, sets `X-Request-ID`, and logs request ID, method, path, status, and duration when the response completes. It runs before JSON parsing, so even malformed-body errors receive an ID. The centralized `src/middleware/errorHandler.js` formats validation, malformed JSON, and unexpected errors and includes that ID; unexpected failures are logged with the same ID. Internal stack traces and exception messages are not returned to clients.
+
+### In-memory storage trade-off
+
+`src/services/quizAttemptService.js` stores submitted attempts in a process-local Map for this prototype. It requires no database setup, but data disappears when the process restarts, does not replicate between server instances, and consumes process memory as attempts accumulate. A production learning platform should persist attempts to a database with appropriate access controls and retention policies.
+
+### Run the API and tests
+
+Install dependencies if needed and configure the existing server's `MONGODB_URI` using `.env.example` (do not commit `.env`). The existing `npm start` starts the full application and connects to MongoDB for the portfolio routes; the quiz route itself uses in-memory storage. Start the server and send a request to `http://localhost:5000/api/quiz-attempts`.
+
+Run the automated Day 4 tests independently of MongoDB:
+
+```bash
+npm test -- tests/quizAttempts.test.js --silent=false
+```
+
+The suite covers a valid `201` response and request log/header, missing `studentId`, empty answers, invalid time values, missing answer fields, unexpected fields, unique request IDs, malformed JSON, and a controlled `500` that does not expose internal details. The suite was attempted in this sandbox, but Supertest's local HTTP connection failed with `connect EACCES 127.0.0.1`; its tests therefore did not pass here. The captured attempt is recorded at `evidence/day-4/test-output.txt`. Rerun the command in an environment whose sandbox allows local loopback connections to produce successful HTTP evidence.

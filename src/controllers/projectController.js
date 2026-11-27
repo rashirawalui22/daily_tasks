@@ -10,7 +10,8 @@ function sendError(res, status, message, code, details) {
   return res.status(status).json({
     success: false,
     message,
-    error: { code, details }
+    error: { code, details },
+    requestId: res.getHeader('X-Request-ID') || null
   });
 }
 
